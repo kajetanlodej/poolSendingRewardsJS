@@ -16,12 +16,12 @@ const {
     sendTransaction
 } = require('./transaction');
 
-// Main function to count and send mining rewards
+// Main function to count and send mining rewards to delegatees
 async function countAndSendMiningRewards() {
     console.log('Fetching active delegators...');
 
     // Fetch active delegators from the pool
-    const activeDelegators = await getActiveDelegators(POOL_ADDRESS, LIMIT);
+    const activeDelegators = await getActiveDelegators(POOL_ADDRESS);
     console.log('Active delegators found:', activeDelegators.length);
     const delegatorTimestamps = [];
     console.log('Fetching timestamps...');
@@ -66,18 +66,21 @@ async function countAndSendMiningRewards() {
         const amountToSend = totalStakeChange * 4 * (1 - POOL_FEE_MINING);
         delegatorTimestamps[i][2] = amountToSend;
     }
-    console.log(delegatorTimestamps);
 
     // Fetch current epoch and nonce for transactions
     const epoch = await getEpoch();
-    let nonce = await getNonce('0x71eecdf6414eda0be975c2b748a74ca5018460e4'); // Change to pool address later
+    let nonce = await getNonce(POOL_ADDRESS); // Change to pool address later
 
     // Send transactions to delegators with calculated rewards
     for (let i = 0; i < delegatorTimestamps.length; i++) {
         const [address, , amountToSend] = delegatorTimestamps[i];
         console.log(`Sending ${amountToSend} iDNA to ${address}...`);
-        const result = await sendTransaction(epoch, nonce, address, 0.0001); //Change amountToSend later
-        console.log('Success! Transaction TX:', result.result, '\n');
+        try {
+            const result = await sendTransaction(epoch, nonce, address, amountToSend, 1);
+            console.log('Success! Transaction TX:', result.result, '\n');
+        } catch (error) {
+            console.error('Transaction failed:', error.message);
+        }
         nonce += 1; // Increment nonce for the next transaction
     }
 }
