@@ -56,5 +56,6 @@ async function countAndSendValidationRewards() {
     }
 }
 
-// Execute the main function
-countAndSendValidationRewards();
+module.exports = {
+    countAndSendValidationRewards
+};

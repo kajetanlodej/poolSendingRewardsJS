@@ -91,6 +91,13 @@ async function getDelegateeValidationResults(epoch, address, limit, continuation
     );
 }
 
+// Function to get this epoch details
+async function getEpochDetails(epoch) {
+    return getResponse(
+        apiClient().get(`epoch/${epoch}`)
+    );
+}
+
 // Function to get all validation rewards for a delegatee
 async function getDelegateesValidationRewards(epoch, address) {
     let Delegatees = [];
@@ -152,6 +159,31 @@ async function getTimestampToCountMiningRewardsSince(delegatorAddress, delegatio
     return delegationTimestamp;
 }
 
+// Function to get the timestamp from which to count mining rewards for a delegator
+// Return true if the rewards have not yet been distributed; otherwise, return false if a record of the distribution exists.
+async function getAssuranceToNotDuplicateValidationRewardsPayments(epochStartTimestamp) {
+    let continuationToken = null;
+
+    do {
+        const response = await getAddressTransactions(POOL_ADDRESS, LIMIT, continuationToken);
+        const transactions = response.result;
+
+        for (const transaction of transactions) {
+            if (new Date(transaction.timestamp) < new Date(epochStartTimestamp)) {
+                return true;
+            }
+            console.log("transaction timestamp:", transaction.timestamp, "last epoch start timestamp:", epochStartTimestamp);
+            if (transaction.type === 'SendTx' && transaction.from === POOL_ADDRESS && transaction.maxFee === 2) {
+                return false;
+            }
+        }
+
+        continuationToken = response.continuationToken;
+    } while (continuationToken);
+
+    return true;
+}
+
 // Exporting the functions for external usage
 module.exports = {
     getPoolDelegators,
@@ -160,5 +192,7 @@ module.exports = {
     getBalanceChanges,
     getActiveDelegators,
     getTimestampToCountMiningRewardsSince,
-    getDelegateesValidationRewards
+    getDelegateesValidationRewards,
+    getEpochDetails,
+    getAssuranceToNotDuplicateValidationRewardsPayments
 };
